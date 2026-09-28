@@ -1,9 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { COLS, createBoard, MINES, toggleFlag, openCell, type Cell, type GameStatus } from "./game";
+import {
+  clampBoardConfig,
+  createBoard,
+  DEFAULT_COLS,
+  DEFAULT_MINES,
+  DEFAULT_ROWS,
+  toggleFlag,
+  openCell,
+  type BoardConfig,
+  type Cell,
+  type GameStatus,
+} from "./game";
 
 const MIN_ZOOM = 0.75;
 const MAX_ZOOM = 2.5;
 const BASE_CELL_SIZE = 28;
+
+const BOARD_PRESETS = [
+  { label: "初級", rows: 16, cols: 16, mines: 10 },
+  { label: "中級", rows: 16, cols: 30, mines: 99 },
+  { label: "上級", rows: 48, cols: 24, mines: 256 },
+] as const;
 
 function clampZoom(value: number) {
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
@@ -17,7 +34,10 @@ function getTouchDistance(
 }
 
 function App() {
-  const [board, setBoard] = useState<Cell[][]>(() => createBoard());
+  const [settings, setSettings] = useState<BoardConfig>(() =>
+    clampBoardConfig(DEFAULT_ROWS, DEFAULT_COLS, DEFAULT_MINES)
+  );
+  const [board, setBoard] = useState<Cell[][]>(() => createBoard(DEFAULT_ROWS, DEFAULT_COLS));
   const [status, setStatus] = useState<GameStatus>("playing");
   const [firstMove, setFirstMove] = useState(true);
   const [elapsed, setElapsed] = useState(0);
@@ -37,11 +57,27 @@ function App() {
     return () => window.clearInterval(id);
   }, [status, firstMove]);
 
-  function reset() {
-    setBoard(createBoard());
+  function applyBoardSettings(nextSettings: BoardConfig) {
+    const normalized = clampBoardConfig(nextSettings.rows, nextSettings.cols, nextSettings.mines);
+    setSettings(normalized);
+    setBoard(createBoard(normalized.rows, normalized.cols));
     setStatus("playing");
     setFirstMove(true);
     setElapsed(0);
+  }
+
+  function reset() {
+    applyBoardSettings(settings);
+  }
+
+  function handleSettingChange(key: "rows" | "cols" | "mines", rawValue: string) {
+    const nextValue = Number.parseInt(rawValue, 10);
+    if (Number.isNaN(nextValue)) return;
+
+    applyBoardSettings({
+      ...settings,
+      [key]: nextValue,
+    });
   }
 
   function clearLongPress() {
@@ -59,7 +95,7 @@ function App() {
 
     if (status !== "playing") return;
 
-    const result = openCell(board, row, col, firstMove);
+    const result = openCell(board, row, col, firstMove, settings.mines);
     setBoard(result.board);
     setStatus(result.status);
     setFirstMove(result.firstMove);
@@ -129,6 +165,13 @@ function App() {
   }
 
   const cellSize = BASE_CELL_SIZE * zoom;
+  const remainingMines = Math.max(settings.mines - flags, 0);
+  const activePreset = BOARD_PRESETS.find(
+    (preset) =>
+      preset.rows === settings.rows &&
+      preset.cols === settings.cols &&
+      preset.mines === settings.mines
+  );
 
   return (
     <main className="app">
@@ -139,7 +182,7 @@ function App() {
           <div className="status">
             <div>
               <span className="label">爆弾</span>
-              <strong>{MINES - flags}</strong>
+              <strong>{remainingMines}</strong>
             </div>
             <div>
               <span className="label">時間</span>
@@ -161,6 +204,52 @@ function App() {
           </div>
         </div>
 
+        <div className="settings" aria-label="盤面設定">
+          <div className="preset-group" aria-label="難易度プリセット">
+            {BOARD_PRESETS.map((preset) => (
+              <button
+                key={preset.label}
+                type="button"
+                className={['preset', activePreset?.label === preset.label ? 'active' : ''].join(' ')}
+                onClick={() => applyBoardSettings(clampBoardConfig(preset.rows, preset.cols, preset.mines))}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+
+          <label className="field">
+            <span>行</span>
+            <input
+              type="number"
+              min={5}
+              max={48}
+              value={settings.rows}
+              onChange={(event) => handleSettingChange("rows", event.target.value)}
+            />
+          </label>
+          <label className="field">
+            <span>列</span>
+            <input
+              type="number"
+              min={5}
+              max={48}
+              value={settings.cols}
+              onChange={(event) => handleSettingChange("cols", event.target.value)}
+            />
+          </label>
+          <label className="field">
+            <span>爆弾</span>
+            <input
+              type="number"
+              min={1}
+              max={Math.max(1, settings.rows * settings.cols - 9)}
+              value={settings.mines}
+              onChange={(event) => handleSettingChange("mines", event.target.value)}
+            />
+          </label>
+        </div>
+
         <div
           className="board-scroll"
           onWheel={handleWheelZoom}
@@ -170,7 +259,7 @@ function App() {
         >
           <div
             className={`board ${status !== "playing" ? "finished" : ""}`}
-            style={{ gridTemplateColumns: `repeat(${COLS}, ${cellSize}px)` }}
+            style={{ gridTemplateColumns: `repeat(${board[0]?.length ?? settings.cols}, ${cellSize}px)` }}
             aria-label="マインスイーパー盤面"
           >
             {board.map((line, row) =>

@@ -7,10 +7,19 @@ export type Cell = {
 
 export type GameStatus = "playing" | "cleared" | "gameover";
 
-export const ROWS = 24;
-export const COLS = 48;
+export type BoardConfig = {
+  rows: number;
+  cols: number;
+  mines: number;
+};
+
+export const DEFAULT_ROWS = 12;
+export const DEFAULT_COLS = 12;
+export const DEFAULT_MINES = 15;
+export const ROWS = DEFAULT_ROWS;
+export const COLS = DEFAULT_COLS;
 export const SIZE = ROWS;
-export const MINES = 10;
+export const MINES = DEFAULT_MINES;
 
 const directions = [
   [-1, -1], [-1, 0], [-1, 1],
@@ -18,9 +27,22 @@ const directions = [
   [1, -1],  [1, 0],  [1, 1],
 ] as const;
 
-export function createBoard(): Cell[][] {
-  return Array.from({ length: ROWS }, () =>
-    Array.from({ length: COLS }, () => ({
+export function clampBoardConfig(rowsValue: number, colsValue: number, minesValue: number): BoardConfig {
+  const rows = Math.min(24, Math.max(5, Math.round(rowsValue)));
+  const cols = Math.min(32, Math.max(5, Math.round(colsValue)));
+  const safeCells = Math.max(1, rows * cols - 9);
+  const mines = Math.min(safeCells, Math.max(1, Math.round(minesValue)));
+
+  return {
+    rows,
+    cols,
+    mines,
+  };
+}
+
+export function createBoard(rows = DEFAULT_ROWS, cols = DEFAULT_COLS): Cell[][] {
+  return Array.from({ length: rows }, () =>
+    Array.from({ length: cols }, () => ({
       mine: false,
       open: false,
       flagged: false,
@@ -38,7 +60,7 @@ function neighbors(row: number, col: number, board: Cell[][]) {
     .filter(([r, c]) => r >= 0 && r < rowCount && c >= 0 && c < colCount);
 }
 
-function placeMines(board: Cell[][], safeRow: number, safeCol: number) {
+function placeMines(board: Cell[][], safeRow: number, safeCol: number, mineCount: number) {
   const candidates: [number, number][] = [];
   const rowCount = board.length;
   const colCount = board[0]?.length ?? 0;
@@ -50,12 +72,24 @@ function placeMines(board: Cell[][], safeRow: number, safeCol: number) {
     }
   }
 
+  if (mineCount <= 0 || candidates.length === 0) {
+    for (let r = 0; r < rowCount; r++) {
+      for (let c = 0; c < colCount; c++) {
+        board[r][c].adjacent = neighbors(r, c, board)
+          .filter(([nr, nc]) => board[nr][nc].mine).length;
+      }
+    }
+    return;
+  }
+
+  const finalMineCount = Math.min(mineCount, candidates.length);
+
   for (let i = candidates.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
   }
 
-  for (let i = 0; i < MINES; i++) {
+  for (let i = 0; i < finalMineCount; i++) {
     const [r, c] = candidates[i];
     board[r][c].mine = true;
   }
@@ -72,12 +106,13 @@ export function openCell(
   board: Cell[][],
   row: number,
   col: number,
-  firstMove: boolean
+  firstMove: boolean,
+  mineCount: number = DEFAULT_MINES
 ): { board: Cell[][]; status: GameStatus; firstMove: boolean } {
   const next = board.map((line) => line.map((cell) => ({ ...cell })));
 
   if (firstMove) {
-    placeMines(next, row, col);
+    placeMines(next, row, col, mineCount);
   }
 
   const cell = next[row][col];
