@@ -93,7 +93,7 @@ h1 {
   overflow: auto;
   border-radius: 8px;
   background: #888;
-  touch-action: pan-x pan-y;
+  touch-action: pan-x pan-y pinch-zoom;
 }
 
 .board {
@@ -108,15 +108,10 @@ h1 {
 }
 
 .cell {
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
-  min-height: 28px;
   display: grid;
   place-items: center;
   border: 0;
   border-radius: 3px;
-  font-size: 16px;
   line-height: 1;
   font-weight: 800;
   cursor: pointer;

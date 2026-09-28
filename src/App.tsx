@@ -1,13 +1,30 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { COLS, createBoard, MINES, toggleFlag, openCell, type Cell, type GameStatus } from "./game";
 
+const MIN_ZOOM = 0.75;
+const MAX_ZOOM = 2.5;
+const BASE_CELL_SIZE = 28;
+
+function clampZoom(value: number) {
+  return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
+}
+
+function getTouchDistance(
+  touchA: { clientX: number; clientY: number },
+  touchB: { clientX: number; clientY: number }
+) {
+  return Math.hypot(touchA.clientX - touchB.clientX, touchA.clientY - touchB.clientY);
+}
+
 function App() {
   const [board, setBoard] = useState<Cell[][]>(() => createBoard());
   const [status, setStatus] = useState<GameStatus>("playing");
   const [firstMove, setFirstMove] = useState(true);
   const [elapsed, setElapsed] = useState(0);
+  const [zoom, setZoom] = useState(1);
   const longPressTimerRef = useRef<number | null>(null);
   const suppressClickRef = useRef(false);
+  const pinchDistanceRef = useRef<number | null>(null);
 
   const flags = useMemo(
     () => board.flat().filter((cell) => cell.flagged).length,
@@ -80,6 +97,39 @@ function App() {
     return String(seconds).padStart(3, "0");
   }
 
+  function updateZoom(nextZoom: number) {
+    setZoom(clampZoom(nextZoom));
+  }
+
+  function handleWheelZoom(event: React.WheelEvent<HTMLDivElement>) {
+    if (!event.ctrlKey && !event.metaKey) return;
+    event.preventDefault();
+    const delta = event.deltaY > 0 ? -0.1 : 0.1;
+    updateZoom(zoom + delta);
+  }
+
+  function handleTouchStart(event: React.TouchEvent<HTMLDivElement>) {
+    if (event.touches.length === 2) {
+      pinchDistanceRef.current = getTouchDistance(event.touches[0], event.touches[1]);
+    }
+  }
+
+  function handleTouchMove(event: React.TouchEvent<HTMLDivElement>) {
+    if (event.touches.length !== 2 || pinchDistanceRef.current === null) return;
+
+    event.preventDefault();
+    const nextDistance = getTouchDistance(event.touches[0], event.touches[1]);
+    const ratio = nextDistance / pinchDistanceRef.current;
+    pinchDistanceRef.current = nextDistance;
+    updateZoom(zoom * ratio);
+  }
+
+  function handleTouchEnd() {
+    pinchDistanceRef.current = null;
+  }
+
+  const cellSize = BASE_CELL_SIZE * zoom;
+
   return (
     <main className="app">
       <section className="game">
@@ -111,10 +161,16 @@ function App() {
           </div>
         </div>
 
-        <div className="board-scroll">
+        <div
+          className="board-scroll"
+          onWheel={handleWheelZoom}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
           <div
             className={`board ${status !== "playing" ? "finished" : ""}`}
-            style={{ gridTemplateColumns: `repeat(${COLS}, 28px)` }}
+            style={{ gridTemplateColumns: `repeat(${COLS}, ${cellSize}px)` }}
             aria-label="マインスイーパー盤面"
           >
             {board.map((line, row) =>
@@ -134,6 +190,13 @@ function App() {
                   onPointerUp={clearLongPress}
                   onPointerLeave={clearLongPress}
                   onPointerCancel={clearLongPress}
+                  style={{
+                    width: `${cellSize}px`,
+                    height: `${cellSize}px`,
+                    minWidth: `${cellSize}px`,
+                    minHeight: `${cellSize}px`,
+                    fontSize: `${Math.max(12, 16 * zoom)}px`,
+                  }}
                   aria-label={`行${row + 1}列${col + 1}`}
                 >
                   {cell.open
