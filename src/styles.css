@@ -38,7 +38,8 @@ button {
 }
 
 .game {
-  width: min(100%, 520px);
+  width: 100%;
+  max-width: 100%;
 }
 
 .header {
@@ -75,10 +76,18 @@ h1 {
   font-size: 20px;
 }
 
+.board-scroll {
+  width: 100%;
+  overflow: auto;
+  border-radius: 8px;
+  background: #888;
+  touch-action: pan-x pan-y;
+}
+
 .board {
   display: grid;
-  width: 100%;
-  aspect-ratio: 1;
+  width: max-content;
+  min-width: 100%;
   gap: 2px;
   padding: 2px;
   background: #888;
@@ -87,14 +96,15 @@ h1 {
 }
 
 .cell {
-  min-width: 0;
-  min-height: 0;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
   display: grid;
   place-items: center;
-  aspect-ratio: 1;
   border: 0;
   border-radius: 3px;
-  font-size: clamp(16px, 7vw, 32px);
+  font-size: 16px;
   line-height: 1;
   font-weight: 800;
   cursor: pointer;

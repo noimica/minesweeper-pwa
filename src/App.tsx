@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createBoard, MINES, SIZE, toggleFlag, openCell, type Cell, type GameStatus } from "./game";
+import { COLS, createBoard, MINES, toggleFlag, openCell, type Cell, type GameStatus } from "./game";
 
 function App() {
   const [board, setBoard] = useState<Cell[][]>(() => createBoard());
@@ -98,42 +98,44 @@ function App() {
           </div>
         </header>
 
-        <div
-          className={`board ${status !== "playing" ? "finished" : ""}`}
-          style={{ gridTemplateColumns: `repeat(${SIZE}, 1fr)` }}
-          aria-label="マインスイーパー盤面"
-        >
-          {board.map((line, row) =>
-            line.map((cell, col) => (
-              <button
-                key={`${row}-${col}`}
-                className={[
-                  "cell",
-                  cell.open ? "open" : "closed",
-                  cell.flagged ? "flagged" : "",
-                  cell.mine && cell.open ? "mine" : "",
-                  cell.open && cell.adjacent > 0 ? `number-${cell.adjacent}` : "",
-                ].join(" ")}
-                onClick={() => handleCellClick(row, col)}
-                onContextMenu={(event) => handleCellContextMenu(event, row, col)}
-                onPointerDown={() => handleLongPressStart(row, col)}
-                onPointerUp={clearLongPress}
-                onPointerLeave={clearLongPress}
-                onPointerCancel={clearLongPress}
-                aria-label={`行${row + 1}列${col + 1}`}
-              >
-                {cell.open
-                  ? cell.mine
-                    ? "●"
-                    : cell.adjacent > 0
-                      ? cell.adjacent
-                      : ""
-                  : cell.flagged
-                    ? "⚑"
-                    : ""}
-              </button>
-            ))
-          )}
+        <div className="board-scroll">
+          <div
+            className={`board ${status !== "playing" ? "finished" : ""}`}
+            style={{ gridTemplateColumns: `repeat(${COLS}, 28px)` }}
+            aria-label="マインスイーパー盤面"
+          >
+            {board.map((line, row) =>
+              line.map((cell, col) => (
+                <button
+                  key={`${row}-${col}`}
+                  className={[
+                    "cell",
+                    cell.open ? "open" : "closed",
+                    cell.flagged ? "flagged" : "",
+                    cell.mine && cell.open ? "mine" : "",
+                    cell.open && cell.adjacent > 0 ? `number-${cell.adjacent}` : "",
+                  ].join(" ")}
+                  onClick={() => handleCellClick(row, col)}
+                  onContextMenu={(event) => handleCellContextMenu(event, row, col)}
+                  onPointerDown={() => handleLongPressStart(row, col)}
+                  onPointerUp={clearLongPress}
+                  onPointerLeave={clearLongPress}
+                  onPointerCancel={clearLongPress}
+                  aria-label={`行${row + 1}列${col + 1}`}
+                >
+                  {cell.open
+                    ? cell.mine
+                      ? "●"
+                      : cell.adjacent > 0
+                        ? cell.adjacent
+                        : ""
+                    : cell.flagged
+                      ? "⚑"
+                      : ""}
+                </button>
+              ))
+            )}
+          </div>
         </div>
 
         <div className="message" aria-live="polite">

@@ -7,7 +7,9 @@ export type Cell = {
 
 export type GameStatus = "playing" | "cleared" | "gameover";
 
-export const SIZE = 9;
+export const ROWS = 24;
+export const COLS = 48;
+export const SIZE = ROWS;
 export const MINES = 10;
 
 const directions = [
@@ -17,8 +19,8 @@ const directions = [
 ] as const;
 
 export function createBoard(): Cell[][] {
-  return Array.from({ length: SIZE }, () =>
-    Array.from({ length: SIZE }, () => ({
+  return Array.from({ length: ROWS }, () =>
+    Array.from({ length: COLS }, () => ({
       mine: false,
       open: false,
       flagged: false,
@@ -27,17 +29,22 @@ export function createBoard(): Cell[][] {
   );
 }
 
-function neighbors(row: number, col: number) {
+function neighbors(row: number, col: number, board: Cell[][]) {
+  const rowCount = board.length;
+  const colCount = board[0]?.length ?? 0;
+
   return directions
     .map(([dr, dc]) => [row + dr, col + dc] as const)
-    .filter(([r, c]) => r >= 0 && r < SIZE && c >= 0 && c < SIZE);
+    .filter(([r, c]) => r >= 0 && r < rowCount && c >= 0 && c < colCount);
 }
 
 function placeMines(board: Cell[][], safeRow: number, safeCol: number) {
   const candidates: [number, number][] = [];
+  const rowCount = board.length;
+  const colCount = board[0]?.length ?? 0;
 
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
+  for (let r = 0; r < rowCount; r++) {
+    for (let c = 0; c < colCount; c++) {
       const isSafe = Math.abs(r - safeRow) <= 1 && Math.abs(c - safeCol) <= 1;
       if (!isSafe) candidates.push([r, c]);
     }
@@ -53,9 +60,9 @@ function placeMines(board: Cell[][], safeRow: number, safeCol: number) {
     board[r][c].mine = true;
   }
 
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
-      board[r][c].adjacent = neighbors(r, c)
+  for (let r = 0; r < rowCount; r++) {
+    for (let c = 0; c < colCount; c++) {
+      board[r][c].adjacent = neighbors(r, c, board)
         .filter(([nr, nc]) => board[nr][nc].mine).length;
     }
   }
@@ -102,7 +109,7 @@ export function openCell(
     current.open = true;
 
     if (current.adjacent === 0) {
-      for (const [nr, nc] of neighbors(r, c)) {
+      for (const [nr, nc] of neighbors(r, c, next)) {
         if (!next[nr][nc].open && !next[nr][nc].mine) {
           queue.push([nr, nc]);
         }
