@@ -47,9 +47,15 @@ function App() {
   const [zoom, setZoom] = useState(1.2);
   const [showSettings, setShowSettings] = useState(false);
   const [draftConfig, setDraftConfig] = useState<BoardConfig>(initialConfig);
+  const zoomRef = useRef(zoom);
   const longPressTimerRef = useRef<number | null>(null);
   const suppressClickRef = useRef(false);
   const pinchDistanceRef = useRef<number | null>(null);
+  const pinchGestureRef = useRef(false);
+
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
 
   const flags = useMemo(
     () => board.flat().filter((cell) => cell.flagged).length,
@@ -123,6 +129,11 @@ function App() {
   }
 
   function handleLongPressStart(row: number, col: number) {
+    if (pinchGestureRef.current) {
+      clearLongPress();
+      return;
+    }
+
     clearLongPress();
     longPressTimerRef.current = window.setTimeout(() => {
       suppressClickRef.current = true;
@@ -144,19 +155,23 @@ function App() {
   }
 
   function updateZoom(nextZoom: number) {
-    setZoom(clampZoom(nextZoom));
+    setZoom((current) => clampZoom(nextZoom ?? current));
   }
 
   function handleWheelZoom(event: React.WheelEvent<HTMLDivElement>) {
     if (!event.ctrlKey && !event.metaKey) return;
     event.preventDefault();
     const delta = event.deltaY > 0 ? -0.1 : 0.1;
-    updateZoom(zoom + delta);
+    updateZoom(zoomRef.current + delta);
   }
 
   function handleTouchStart(event: React.TouchEvent<HTMLDivElement>) {
     if (event.touches.length === 2) {
+      event.preventDefault();
+      pinchGestureRef.current = true;
       pinchDistanceRef.current = getTouchDistance(event.touches[0], event.touches[1]);
+      clearLongPress();
+      suppressClickRef.current = true;
     }
   }
 
@@ -167,11 +182,13 @@ function App() {
     const nextDistance = getTouchDistance(event.touches[0], event.touches[1]);
     const ratio = nextDistance / pinchDistanceRef.current;
     pinchDistanceRef.current = nextDistance;
-    updateZoom(zoom * ratio);
+    updateZoom(zoomRef.current * ratio);
   }
 
   function handleTouchEnd() {
+    pinchGestureRef.current = false;
     pinchDistanceRef.current = null;
+    suppressClickRef.current = false;
   }
 
   const cellSize = BASE_CELL_SIZE * zoom;
