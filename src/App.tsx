@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createBoard, MINES, SIZE, toggleFlag, openCell, type Cell, type GameStatus } from "./game";
 
 type Mode = "open" | "flag";
@@ -9,6 +9,8 @@ function App() {
   const [mode, setMode] = useState<Mode>("open");
   const [firstMove, setFirstMove] = useState(true);
   const [elapsed, setElapsed] = useState(0);
+  const longPressTimerRef = useRef<number | null>(null);
+  const suppressClickRef = useRef(false);
 
   const flags = useMemo(
     () => board.flat().filter((cell) => cell.flagged).length,
@@ -29,7 +31,19 @@ function App() {
     setElapsed(0);
   }
 
+  function clearLongPress() {
+    if (longPressTimerRef.current !== null) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }
+
   function handleCellClick(row: number, col: number) {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
+
     if (status !== "playing") return;
 
     if (mode === "flag") {
@@ -42,6 +56,34 @@ function App() {
     setStatus(result.status);
     setFirstMove(result.firstMove);
   }
+
+  function handleCellContextMenu(
+    event: React.MouseEvent<HTMLButtonElement>,
+    row: number,
+    col: number
+  ) {
+    event.preventDefault();
+    if (status !== "playing") return;
+
+    setBoard((current) => toggleFlag(current, row, col));
+  }
+
+  function handleLongPressStart(row: number, col: number) {
+    clearLongPress();
+    longPressTimerRef.current = window.setTimeout(() => {
+      suppressClickRef.current = true;
+      setBoard((current) => {
+        const target = current[row][col];
+        if (target.open) return current;
+        return toggleFlag(current, row, col);
+      });
+      clearLongPress();
+    }, 400);
+  }
+
+  useEffect(() => {
+    return () => clearLongPress();
+  }, []);
 
   function formatTime(seconds: number) {
     return String(seconds).padStart(3, "0");
@@ -82,6 +124,11 @@ function App() {
                   cell.open && cell.adjacent > 0 ? `number-${cell.adjacent}` : "",
                 ].join(" ")}
                 onClick={() => handleCellClick(row, col)}
+                onContextMenu={(event) => handleCellContextMenu(event, row, col)}
+                onPointerDown={() => handleLongPressStart(row, col)}
+                onPointerUp={clearLongPress}
+                onPointerLeave={clearLongPress}
+                onPointerCancel={clearLongPress}
                 aria-label={`行${row + 1}列${col + 1}`}
               >
                 {cell.open
