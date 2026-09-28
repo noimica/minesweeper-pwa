@@ -98,6 +98,19 @@ function App() {
           </div>
         </header>
 
+        <div className="toolbar">
+          <div className="message" aria-live="polite">
+            {status === "playing" && firstMove && "最初のマスは安全です"}
+            {status === "playing" && !firstMove && "爆弾を避けてすべての安全なマスを開こう"}
+            {status === "cleared" && "クリアしました"}
+            {status === "gameover" && "ゲームオーバー"}
+          </div>
+
+          <div className="controls">
+            <button onClick={reset}>リセット</button>
+          </div>
+        </div>
+
         <div className="board-scroll">
           <div
             className={`board ${status !== "playing" ? "finished" : ""}`}
@@ -136,17 +149,6 @@ function App() {
               ))
             )}
           </div>
-        </div>
-
-        <div className="message" aria-live="polite">
-          {status === "playing" && firstMove && "最初のマスは安全です"}
-          {status === "playing" && !firstMove && "爆弾を避けてすべての安全なマスを開こう"}
-          {status === "cleared" && "クリアしました"}
-          {status === "gameover" && "ゲームオーバー"}
-        </div>
-
-        <div className="controls">
-          <button onClick={reset}>リセット</button>
         </div>
       </section>
     </main>
