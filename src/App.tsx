@@ -27,6 +27,48 @@ function clampZoom(value: number) {
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
 }
 
+function getSimpleHintMap(board: Cell[][]): Map<string, "safe" | "mine"> {
+  const hints = new Map<string, "safe" | "mine">();
+
+  for (let row = 0; row < board.length; row++) {
+    for (let col = 0; col < board[row].length; col++) {
+      const cell = board[row][col];
+      if (!cell.open || cell.adjacent <= 0) continue;
+
+      const neighbors: [number, number][] = [];
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          if (dr === 0 && dc === 0) continue;
+          const nextRow = row + dr;
+          const nextCol = col + dc;
+          if (nextRow < 0 || nextRow >= board.length || nextCol < 0 || nextCol >= board[0].length) {
+            continue;
+          }
+          neighbors.push([nextRow, nextCol]);
+        }
+      }
+
+      const hiddenNeighbors = neighbors.filter(([r, c]) => !board[r][c].open && !board[r][c].flagged);
+      const flaggedNeighbors = neighbors.filter(([r, c]) => board[r][c].flagged).length;
+      const remainingMines = cell.adjacent - flaggedNeighbors;
+
+      if (remainingMines === 0) {
+        for (const [r, c] of hiddenNeighbors) {
+          hints.set(`${r}-${c}`, "safe");
+        }
+      }
+
+      if (hiddenNeighbors.length > 0 && remainingMines === hiddenNeighbors.length) {
+        for (const [r, c] of hiddenNeighbors) {
+          hints.set(`${r}-${c}`, "mine");
+        }
+      }
+    }
+  }
+
+  return hints;
+}
+
 function getTouchDistance(
   touchA: { clientX: number; clientY: number },
   touchB: { clientX: number; clientY: number }
@@ -216,35 +258,28 @@ function App() {
       numbers: board.map((line) => line.map((cell) => cell.open ? cell.adjacent : 0)),
     };
 
-    const result = solvePublicBoard(publicBoard);
-    if (result.type === "contradiction") {
-      return new Map<string, "safe" | "mine">();
-    }
+    const nextHints = getSimpleHintMap(board);
 
-    const nextHints = new Map<string, "safe" | "mine">();
-    for (let row = 0; row < board.length; row++) {
-      for (let col = 0; col < board[row].length; col++) {
-        const cell = board[row][col];
-        if (cell.open || cell.flagged) continue;
-        const id = row * board[row].length + col;
-        const value = result.assignments[id];
-        if (value === false) {
-          nextHints.set(`${row}-${col}`, "safe");
-        }
-        if (value === true) {
-          nextHints.set(`${row}-${col}`, "mine");
+    const result = solvePublicBoard(publicBoard);
+    if (result.type !== "contradiction") {
+      for (let row = 0; row < board.length; row++) {
+        for (let col = 0; col < board[row].length; col++) {
+          const cell = board[row][col];
+          if (cell.open || cell.flagged) continue;
+          const id = row * board[row].length + col;
+          const value = result.assignments[id];
+          if (value === false) {
+            nextHints.set(`${row}-${col}`, "safe");
+          }
+          if (value === true) {
+            nextHints.set(`${row}-${col}`, "mine");
+          }
         }
       }
     }
 
     return nextHints;
   }, [board, boardConfig.mines, showHints, status]);
-
-  const boardHintState = showHints
-    ? hintCells.size === 0
-      ? "empty"
-      : "active"
-    : "off";
 
   return (
     <main className="app">
@@ -270,8 +305,6 @@ function App() {
           </div>
         </header>
 
-        {showHints && <div className="hint-status">{boardHintState === "empty" ? "推定なし" : `${hintCells.size}マスが確定`}</div>}
-
         <div
           className="board-scroll"
           onWheel={handleWheelZoom}
@@ -280,11 +313,7 @@ function App() {
           onTouchEnd={handleTouchEnd}
         >
           <div
-            className={[
-              "board",
-              status !== "playing" ? "finished" : "",
-              boardHintState === "empty" ? "hint-empty" : "",
-            ].join(" ")}
+            className={`board ${status !== "playing" ? "finished" : ""}`}
             style={{ gridTemplateColumns: `repeat(${boardConfig.cols}, ${cellSize}px)` }}
             aria-label="マインスイーパー盤面"
           >
