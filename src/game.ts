@@ -165,11 +165,7 @@ export function openCell(
   }
 
   if (cell.mine) {
-    for (const line of next) {
-      for (const c of line) {
-        if (c.mine) c.open = true;
-      }
-    }
+    cell.open = true;
     return { board: next, status: "gameover", firstMove: false };
   }
 
@@ -214,6 +210,31 @@ export function toggleFlag(board: Cell[][], row: number, col: number): Cell[][] 
         ? { ...cell, flagged: !cell.flagged }
         : { ...cell }
     )
+  );
+}
+
+export function resetBoardForRetry(
+  board: Cell[][],
+  lastTriggeredMine?: { row: number; col: number } | null
+): Cell[][] {
+  return board.map((line, row) =>
+    line.map((cell, col) => {
+      const isLastTriggeredMine =
+        lastTriggeredMine !== null &&
+        lastTriggeredMine !== undefined &&
+        row === lastTriggeredMine.row &&
+        col === lastTriggeredMine.col;
+
+      if (isLastTriggeredMine) {
+        return {
+          ...cell,
+          open: false,
+          flagged: false,
+        };
+      }
+
+      return { ...cell };
+    })
   );
 }
 

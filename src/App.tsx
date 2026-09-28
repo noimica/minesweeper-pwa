@@ -6,6 +6,7 @@ import {
   DEFAULT_MINES,
   DEFAULT_ROWS,
   openCell,
+  resetBoardForRetry,
   solvePublicBoard,
   toggleFlag,
   type BoardConfig,
@@ -87,6 +88,7 @@ function App() {
   const [status, setStatus] = useState<GameStatus>("playing");
   const [firstMove, setFirstMove] = useState(true);
   const [elapsed, setElapsed] = useState(0);
+  const [lastTriggeredMine, setLastTriggeredMine] = useState<{ row: number; col: number } | null>(null);
   const [zoom, setZoom] = useState(1.2);
   const [showSettings, setShowSettings] = useState(false);
   const [showHints, setShowHints] = useState(true);
@@ -125,6 +127,13 @@ function App() {
     applyBoardSettings(boardConfig);
   }
 
+  function retryGame() {
+    setBoard((current) => resetBoardForRetry(current, lastTriggeredMine));
+    setStatus("playing");
+    setFirstMove(false);
+    setElapsed(0);
+  }
+
   function openSettings() {
     setDraftConfig(boardConfig);
     setShowSettings(true);
@@ -157,6 +166,9 @@ function App() {
 
     const result = openCell(board, row, col, firstMove, boardConfig.mines);
     setBoard(result.board);
+    if (result.status === "gameover") {
+      setLastTriggeredMine({ row, col });
+    }
     setStatus(result.status);
     setFirstMove(result.firstMove);
   }
@@ -302,6 +314,11 @@ function App() {
             </button>
             <button type="button" onClick={openSettings}>設定</button>
             <button type="button" onClick={reset}>リセット</button>
+            {status === "gameover" && (
+              <button type="button" onClick={retryGame} className="retry-button">
+                リトライ
+              </button>
+            )}
           </div>
         </header>
 
@@ -360,6 +377,18 @@ function App() {
           </div>
         </div>
       </section>
+
+      {status === "gameover" && (
+        <div className="result-overlay" role="dialog" aria-modal="true" aria-label="ゲームオーバー">
+          <div className="result-dialog">
+            <h2>爆弾に当たりました</h2>
+            <p>同じ条件でもう一度挑戦できます。</p>
+            <button type="button" onClick={retryGame} className="primary-action">
+              リトライ
+            </button>
+          </div>
+        </div>
+      )}
 
       {showSettings && (
         <div className="settings-overlay" onClick={() => setShowSettings(false)}>
