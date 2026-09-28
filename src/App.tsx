@@ -187,8 +187,6 @@ function App() {
     <main className="app">
       <section className="game">
         <header className="header">
-          <h1>マインスイーパー</h1>
-
           <div className="status">
             <div>
               <span className="label">爆弾</span>
@@ -199,21 +197,12 @@ function App() {
               <strong>{formatTime(elapsed)}</strong>
             </div>
           </div>
-        </header>
-
-        <div className="toolbar">
-          <div className="message" aria-live="polite">
-            {status === "playing" && firstMove && "最初のマスは安全です"}
-            {status === "playing" && !firstMove && "爆弾を避けてすべての安全なマスを開こう"}
-            {status === "cleared" && "クリアしました"}
-            {status === "gameover" && "ゲームオーバー"}
-          </div>
 
           <div className="controls">
             <button type="button" onClick={openSettings}>設定</button>
             <button type="button" onClick={reset}>リセット</button>
           </div>
-        </div>
+        </header>
 
         <div
           className="board-scroll"
