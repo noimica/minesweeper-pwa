@@ -28,8 +28,8 @@ const directions = [
 ] as const;
 
 export function clampBoardConfig(rowsValue: number, colsValue: number, minesValue: number): BoardConfig {
-  const rows = Math.min(24, Math.max(5, Math.round(rowsValue)));
-  const cols = Math.min(32, Math.max(5, Math.round(colsValue)));
+  const rows = Math.min(48, Math.max(5, Math.round(rowsValue)));
+  const cols = Math.min(48, Math.max(5, Math.round(colsValue)));
   const safeCells = Math.max(1, rows * cols - 9);
   const mines = Math.min(safeCells, Math.max(1, Math.round(minesValue)));
 

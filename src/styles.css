@@ -22,7 +22,8 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-button {
+button,
+input {
   font: inherit;
 }
 
@@ -86,53 +87,39 @@ h1 {
   gap: 12px;
 }
 
-.settings {
+.message {
+  min-height: 44px;
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
+  place-items: center;
+  text-align: center;
+  font-size: 14px;
+  color: #666;
+  flex: 1;
 }
 
-.preset-group {
+.controls {
   display: flex;
-  flex-wrap: wrap;
   gap: 8px;
 }
 
-.preset {
-  min-height: 36px;
-  padding: 0 12px;
+.controls button,
+.close-button,
+.preset,
+.settings-actions button {
+  min-height: 44px;
   border: 1px solid #ccc;
-  border-radius: 999px;
+  border-radius: 10px;
   background: white;
   color: #222;
   font-weight: 700;
-  cursor: pointer;
+  padding: 0 12px;
 }
 
-.preset.active {
-  background: #222;
-  border-color: #222;
-  color: white;
-}
-
-.field {
-  display: grid;
-  grid-template-columns: 36px 1fr;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: #555;
-}
-
-.field input {
-  width: 100%;
-  min-height: 40px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  background: white;
-  color: #222;
-  font: inherit;
-  padding: 0 10px;
+.controls button:active,
+.close-button:active,
+.preset:active,
+.settings-actions button:active {
+  transform: scale(0.98);
 }
 
 .board-scroll {
@@ -209,39 +196,84 @@ h1 {
   color: #5e35b1;
 }
 
-.message {
-  min-height: 44px;
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(25, 25, 25, 0.45);
   display: grid;
   place-items: center;
-  text-align: center;
-  font-size: 14px;
-  color: #666;
-  flex: 1;
+  padding: 16px;
+  z-index: 50;
 }
 
-.controls {
-  display: grid;
-  min-width: 120px;
-  gap: 8px;
-}
-
-.controls button {
-  min-height: 48px;
-  border: 1px solid #ccc;
-  border-radius: 10px;
+.settings-dialog {
+  width: min(100%, 420px);
   background: white;
-  color: #222;
-  font-weight: 700;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22);
 }
 
-.controls button.active {
+.settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.settings-header h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.preset-group {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.preset {
+  background: #f3f3f3;
+}
+
+.preset.active {
   background: #222;
   color: white;
   border-color: #222;
 }
 
-.controls button:active {
-  transform: scale(0.98);
+.config-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  color: #444;
+  font-size: 14px;
+}
+
+.field input {
+  width: 100%;
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid #d0d0d0;
+  padding: 0 10px;
+  font-size: 16px;
+}
+
+.settings-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.settings-actions .secondary {
+  background: #f5f5f5;
 }
 
 @media (min-width: 600px) {

@@ -5,8 +5,8 @@ import {
   DEFAULT_COLS,
   DEFAULT_MINES,
   DEFAULT_ROWS,
-  toggleFlag,
   openCell,
+  toggleFlag,
   type BoardConfig,
   type Cell,
   type GameStatus,
@@ -14,9 +14,9 @@ import {
 
 const MIN_ZOOM = 0.75;
 const MAX_ZOOM = 2.5;
-const BASE_CELL_SIZE = 28;
+const BASE_CELL_SIZE = 32;
 
-const BOARD_PRESETS = [
+const PRESET_OPTIONS = [
   { label: "初級", rows: 16, cols: 16, mines: 10 },
   { label: "中級", rows: 16, cols: 30, mines: 99 },
   { label: "上級", rows: 48, cols: 24, mines: 256 },
@@ -34,14 +34,19 @@ function getTouchDistance(
 }
 
 function App() {
-  const [settings, setSettings] = useState<BoardConfig>(() =>
-    clampBoardConfig(DEFAULT_ROWS, DEFAULT_COLS, DEFAULT_MINES)
+  const initialConfig = useMemo(
+    () => clampBoardConfig(DEFAULT_ROWS, DEFAULT_COLS, DEFAULT_MINES),
+    []
   );
+
+  const [boardConfig, setBoardConfig] = useState<BoardConfig>(initialConfig);
   const [board, setBoard] = useState<Cell[][]>(() => createBoard(DEFAULT_ROWS, DEFAULT_COLS));
   const [status, setStatus] = useState<GameStatus>("playing");
   const [firstMove, setFirstMove] = useState(true);
   const [elapsed, setElapsed] = useState(0);
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(1.2);
+  const [showSettings, setShowSettings] = useState(false);
+  const [draftConfig, setDraftConfig] = useState<BoardConfig>(initialConfig);
   const longPressTimerRef = useRef<number | null>(null);
   const suppressClickRef = useRef(false);
   const pinchDistanceRef = useRef<number | null>(null);
@@ -57,9 +62,9 @@ function App() {
     return () => window.clearInterval(id);
   }, [status, firstMove]);
 
-  function applyBoardSettings(nextSettings: BoardConfig) {
-    const normalized = clampBoardConfig(nextSettings.rows, nextSettings.cols, nextSettings.mines);
-    setSettings(normalized);
+  function applyBoardSettings(nextConfig: BoardConfig) {
+    const normalized = clampBoardConfig(nextConfig.rows, nextConfig.cols, nextConfig.mines);
+    setBoardConfig(normalized);
     setBoard(createBoard(normalized.rows, normalized.cols));
     setStatus("playing");
     setFirstMove(true);
@@ -67,17 +72,22 @@ function App() {
   }
 
   function reset() {
-    applyBoardSettings(settings);
+    applyBoardSettings(boardConfig);
   }
 
-  function handleSettingChange(key: "rows" | "cols" | "mines", rawValue: string) {
-    const nextValue = Number.parseInt(rawValue, 10);
-    if (Number.isNaN(nextValue)) return;
+  function openSettings() {
+    setDraftConfig(boardConfig);
+    setShowSettings(true);
+  }
 
-    applyBoardSettings({
-      ...settings,
-      [key]: nextValue,
-    });
+  function applySettings() {
+    const normalized = clampBoardConfig(draftConfig.rows, draftConfig.cols, draftConfig.mines);
+    setBoardConfig(normalized);
+    setBoard(createBoard(normalized.rows, normalized.cols));
+    setStatus("playing");
+    setFirstMove(true);
+    setElapsed(0);
+    setShowSettings(false);
   }
 
   function clearLongPress() {
@@ -95,7 +105,7 @@ function App() {
 
     if (status !== "playing") return;
 
-    const result = openCell(board, row, col, firstMove, settings.mines);
+    const result = openCell(board, row, col, firstMove, boardConfig.mines);
     setBoard(result.board);
     setStatus(result.status);
     setFirstMove(result.firstMove);
@@ -165,12 +175,12 @@ function App() {
   }
 
   const cellSize = BASE_CELL_SIZE * zoom;
-  const remainingMines = Math.max(settings.mines - flags, 0);
-  const activePreset = BOARD_PRESETS.find(
+  const remainingMines = Math.max(boardConfig.mines - flags, 0);
+  const activePreset = PRESET_OPTIONS.find(
     (preset) =>
-      preset.rows === settings.rows &&
-      preset.cols === settings.cols &&
-      preset.mines === settings.mines
+      preset.rows === boardConfig.rows &&
+      preset.cols === boardConfig.cols &&
+      preset.mines === boardConfig.mines
   );
 
   return (
@@ -200,54 +210,9 @@ function App() {
           </div>
 
           <div className="controls">
-            <button onClick={reset}>リセット</button>
+            <button type="button" onClick={openSettings}>設定</button>
+            <button type="button" onClick={reset}>リセット</button>
           </div>
-        </div>
-
-        <div className="settings" aria-label="盤面設定">
-          <div className="preset-group" aria-label="難易度プリセット">
-            {BOARD_PRESETS.map((preset) => (
-              <button
-                key={preset.label}
-                type="button"
-                className={['preset', activePreset?.label === preset.label ? 'active' : ''].join(' ')}
-                onClick={() => applyBoardSettings(clampBoardConfig(preset.rows, preset.cols, preset.mines))}
-              >
-                {preset.label}
-              </button>
-            ))}
-          </div>
-
-          <label className="field">
-            <span>行</span>
-            <input
-              type="number"
-              min={5}
-              max={48}
-              value={settings.rows}
-              onChange={(event) => handleSettingChange("rows", event.target.value)}
-            />
-          </label>
-          <label className="field">
-            <span>列</span>
-            <input
-              type="number"
-              min={5}
-              max={48}
-              value={settings.cols}
-              onChange={(event) => handleSettingChange("cols", event.target.value)}
-            />
-          </label>
-          <label className="field">
-            <span>爆弾</span>
-            <input
-              type="number"
-              min={1}
-              max={Math.max(1, settings.rows * settings.cols - 9)}
-              value={settings.mines}
-              onChange={(event) => handleSettingChange("mines", event.target.value)}
-            />
-          </label>
         </div>
 
         <div
@@ -259,7 +224,7 @@ function App() {
         >
           <div
             className={`board ${status !== "playing" ? "finished" : ""}`}
-            style={{ gridTemplateColumns: `repeat(${board[0]?.length ?? settings.cols}, ${cellSize}px)` }}
+            style={{ gridTemplateColumns: `repeat(${boardConfig.cols}, ${cellSize}px)` }}
             aria-label="マインスイーパー盤面"
           >
             {board.map((line, row) =>
@@ -303,6 +268,93 @@ function App() {
           </div>
         </div>
       </section>
+
+      {showSettings && (
+        <div className="settings-overlay" onClick={() => setShowSettings(false)}>
+          <div className="settings-dialog" onClick={(event) => event.stopPropagation()}>
+            <div className="settings-header">
+              <h2>設定</h2>
+              <button type="button" className="close-button" onClick={() => setShowSettings(false)}>
+                閉じる
+              </button>
+            </div>
+
+            <div className="preset-group">
+              {PRESET_OPTIONS.map((preset) => (
+                <button
+                  key={preset.label}
+                  type="button"
+                  className={
+                    activePreset?.label === preset.label ? "preset active" : "preset"
+                  }
+                  onClick={() => setDraftConfig(clampBoardConfig(preset.rows, preset.cols, preset.mines))}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="config-grid">
+              <label className="field">
+                <span>行</span>
+                <input
+                  type="number"
+                  min={5}
+                  max={48}
+                  value={draftConfig.rows}
+                  onChange={(event) =>
+                    setDraftConfig((current) => ({
+                      ...current,
+                      rows: Number(event.target.value),
+                    }))
+                  }
+                />
+              </label>
+
+              <label className="field">
+                <span>列</span>
+                <input
+                  type="number"
+                  min={5}
+                  max={48}
+                  value={draftConfig.cols}
+                  onChange={(event) =>
+                    setDraftConfig((current) => ({
+                      ...current,
+                      cols: Number(event.target.value),
+                    }))
+                  }
+                />
+              </label>
+
+              <label className="field">
+                <span>爆弾</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={Math.max(1, draftConfig.rows * draftConfig.cols - 9)}
+                  value={draftConfig.mines}
+                  onChange={(event) =>
+                    setDraftConfig((current) => ({
+                      ...current,
+                      mines: Number(event.target.value),
+                    }))
+                  }
+                />
+              </label>
+            </div>
+
+            <div className="settings-actions">
+              <button type="button" className="secondary" onClick={() => setShowSettings(false)}>
+                キャンセル
+              </button>
+              <button type="button" onClick={applySettings}>
+                適用
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
