@@ -1,12 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createBoard, MINES, SIZE, toggleFlag, openCell, type Cell, type GameStatus } from "./game";
 
-type Mode = "open" | "flag";
-
 function App() {
   const [board, setBoard] = useState<Cell[][]>(() => createBoard());
   const [status, setStatus] = useState<GameStatus>("playing");
-  const [mode, setMode] = useState<Mode>("open");
   const [firstMove, setFirstMove] = useState(true);
   const [elapsed, setElapsed] = useState(0);
   const longPressTimerRef = useRef<number | null>(null);
@@ -26,7 +23,6 @@ function App() {
   function reset() {
     setBoard(createBoard());
     setStatus("playing");
-    setMode("open");
     setFirstMove(true);
     setElapsed(0);
   }
@@ -45,11 +41,6 @@ function App() {
     }
 
     if (status !== "playing") return;
-
-    if (mode === "flag") {
-      setBoard((current) => toggleFlag(current, row, col));
-      return;
-    }
 
     const result = openCell(board, row, col, firstMove);
     setBoard(result.board);
@@ -153,18 +144,6 @@ function App() {
         </div>
 
         <div className="controls">
-          <button
-            className={mode === "open" ? "active" : ""}
-            onClick={() => setMode("open")}
-          >
-            開く
-          </button>
-          <button
-            className={mode === "flag" ? "active" : ""}
-            onClick={() => setMode("flag")}
-          >
-            旗を置く
-          </button>
           <button onClick={reset}>リセット</button>
         </div>
       </section>
