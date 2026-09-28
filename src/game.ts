@@ -102,6 +102,46 @@ function placeMines(board: Cell[][], safeRow: number, safeCol: number, mineCount
   }
 }
 
+function applyChord(board: Cell[][], row: number, col: number): { board: Cell[][]; status: GameStatus; firstMove: boolean } {
+  const cell = board[row][col];
+  if (!cell.open || cell.adjacent <= 0) {
+    return { board, status: "playing", firstMove: false };
+  }
+
+  const adjacentCells = neighbors(row, col, board);
+  const hiddenNeighbors = adjacentCells.filter(([r, c]) => !board[r][c].open && !board[r][c].flagged);
+  const flaggedNeighbors = adjacentCells.filter(([r, c]) => board[r][c].flagged).length;
+  const remainingMines = cell.adjacent - flaggedNeighbors;
+
+  if (remainingMines > 0 && hiddenNeighbors.length === remainingMines) {
+    for (const [r, c] of hiddenNeighbors) {
+      board[r][c].flagged = true;
+    }
+    return { board, status: "playing", firstMove: false };
+  }
+
+  if (flaggedNeighbors === cell.adjacent) {
+    let nextBoard = board;
+    let currentStatus: GameStatus = "playing";
+
+    for (const [r, c] of adjacentCells) {
+      if (nextBoard[r][c].flagged || nextBoard[r][c].open) continue;
+
+      const result = openCell(nextBoard, r, c, false);
+      nextBoard = result.board;
+      currentStatus = result.status;
+
+      if (result.status === "gameover") {
+        return { board: nextBoard, status: "gameover", firstMove: false };
+      }
+    }
+
+    return { board: nextBoard, status: currentStatus, firstMove: false };
+  }
+
+  return { board, status: "playing", firstMove: false };
+}
+
 export function openCell(
   board: Cell[][],
   row: number,
@@ -116,6 +156,10 @@ export function openCell(
   }
 
   const cell = next[row][col];
+  if (cell.open && cell.adjacent > 0) {
+    return applyChord(next, row, col);
+  }
+
   if (cell.flagged || cell.open) {
     return { board: next, status: "playing", firstMove: false };
   }
