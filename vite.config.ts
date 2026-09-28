@@ -32,7 +32,7 @@ export default defineConfig({
       },
     }),
   ],
-  base: "/weekly-report/",
+  base: "/minesweeper-pwa/",
   server: {
     host: true,
     watch: {

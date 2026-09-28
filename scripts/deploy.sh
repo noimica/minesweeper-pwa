@@ -1,8 +1,8 @@
-rm -rf ../work-report-gh-pages/*
-cp -r dist/* ../work-report-gh-pages/
-touch ../work-report-gh-pages/.nojekyll
+rm -rf ../minesweeper-gh-pages/*
+cp -r dist/* ../minesweeper-gh-pages/
+touch ../minesweeper-gh-pages/.nojekyll
 
-cd ../work-report-gh-pages
+cd ../minesweeper-gh-pages
 
 git add .
 git commit -m "Deploy"
