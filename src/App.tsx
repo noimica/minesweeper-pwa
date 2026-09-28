@@ -6,6 +6,7 @@ import {
   DEFAULT_MINES,
   DEFAULT_ROWS,
   openCell,
+  solvePublicBoard,
   toggleFlag,
   type BoardConfig,
   type Cell,
@@ -46,6 +47,7 @@ function App() {
   const [elapsed, setElapsed] = useState(0);
   const [zoom, setZoom] = useState(1.2);
   const [showSettings, setShowSettings] = useState(false);
+  const [showHints, setShowHints] = useState(true);
   const [draftConfig, setDraftConfig] = useState<BoardConfig>(initialConfig);
   const zoomRef = useRef(zoom);
   const longPressTimerRef = useRef<number | null>(null);
@@ -200,6 +202,50 @@ function App() {
       preset.mines === boardConfig.mines
   );
 
+  const hintCells = useMemo(() => {
+    if (!showHints || status !== "playing") {
+      return new Map<string, "safe" | "mine">();
+    }
+
+    const publicBoard = {
+      rows: board.length,
+      cols: board[0]?.length ?? 0,
+      mines: boardConfig.mines,
+      opened: board.map((line) => line.map((cell) => cell.open)),
+      flagged: board.map((line) => line.map((cell) => cell.flagged)),
+      numbers: board.map((line) => line.map((cell) => cell.open ? cell.adjacent : 0)),
+    };
+
+    const result = solvePublicBoard(publicBoard);
+    if (result.type === "contradiction") {
+      return new Map<string, "safe" | "mine">();
+    }
+
+    const nextHints = new Map<string, "safe" | "mine">();
+    for (let row = 0; row < board.length; row++) {
+      for (let col = 0; col < board[row].length; col++) {
+        const cell = board[row][col];
+        if (cell.open || cell.flagged) continue;
+        const id = row * board[row].length + col;
+        const value = result.assignments[id];
+        if (value === false) {
+          nextHints.set(`${row}-${col}`, "safe");
+        }
+        if (value === true) {
+          nextHints.set(`${row}-${col}`, "mine");
+        }
+      }
+    }
+
+    return nextHints;
+  }, [board, boardConfig.mines, showHints, status]);
+
+  const boardHintState = showHints
+    ? hintCells.size === 0
+      ? "empty"
+      : "active"
+    : "off";
+
   return (
     <main className="app">
       <section className="game">
@@ -216,10 +262,15 @@ function App() {
           </div>
 
           <div className="controls">
+            <button type="button" onClick={() => setShowHints((current) => !current)}>
+              {showHints ? "ヒント:ON" : "ヒント:OFF"}
+            </button>
             <button type="button" onClick={openSettings}>設定</button>
             <button type="button" onClick={reset}>リセット</button>
           </div>
         </header>
+
+        {showHints && <div className="hint-status">{boardHintState === "empty" ? "推定なし" : `${hintCells.size}マスが確定`}</div>}
 
         <div
           className="board-scroll"
@@ -229,7 +280,11 @@ function App() {
           onTouchEnd={handleTouchEnd}
         >
           <div
-            className={`board ${status !== "playing" ? "finished" : ""}`}
+            className={[
+              "board",
+              status !== "playing" ? "finished" : "",
+              boardHintState === "empty" ? "hint-empty" : "",
+            ].join(" ")}
             style={{ gridTemplateColumns: `repeat(${boardConfig.cols}, ${cellSize}px)` }}
             aria-label="マインスイーパー盤面"
           >
@@ -243,6 +298,8 @@ function App() {
                     cell.flagged ? "flagged" : "",
                     cell.mine && cell.open ? "mine" : "",
                     cell.open && cell.adjacent > 0 ? `number-${cell.adjacent}` : "",
+                    showHints && hintCells.get(`${row}-${col}`) === "safe" ? "hint-safe" : "",
+                    showHints && hintCells.get(`${row}-${col}`) === "mine" ? "hint-mine" : "",
                   ].join(" ")}
                   onClick={() => handleCellClick(row, col)}
                   onContextMenu={(event) => handleCellContextMenu(event, row, col)}

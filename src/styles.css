@@ -119,6 +119,17 @@ input {
   touch-action: manipulation;
 }
 
+.board.hint-empty {
+  box-shadow: inset 0 0 0 3px rgba(234, 179, 8, 0.9);
+}
+
+.hint-status {
+  margin: 0 8px;
+  font-size: 12px;
+  color: #666;
+  font-weight: 700;
+}
+
 .cell {
   display: grid;
   place-items: center;
@@ -150,6 +161,16 @@ input {
 
 .cell.mine {
   background: #ddd;
+}
+
+.cell.hint-safe {
+  background: #dff7ea;
+  box-shadow: inset 0 0 0 3px rgba(34, 197, 94, 0.8);
+}
+
+.cell.hint-mine {
+  background: #ffe7e7;
+  box-shadow: inset 0 0 0 3px rgba(239, 68, 68, 0.8);
 }
 
 .number-1 {
