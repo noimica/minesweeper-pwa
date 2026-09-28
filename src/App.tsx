@@ -96,6 +96,7 @@ function App() {
   const zoomRef = useRef(zoom);
   const longPressTimerRef = useRef<number | null>(null);
   const suppressClickRef = useRef(false);
+  const lastFlagToggleRef = useRef<number>(0);
   const pinchDistanceRef = useRef<number | null>(null);
   const pinchGestureRef = useRef(false);
 
@@ -179,6 +180,10 @@ function App() {
     col: number
   ) {
     event.preventDefault();
+    // Prevent duplicate toggles when long-press also triggers contextmenu
+    const now = Date.now();
+    if (now - lastFlagToggleRef.current < 500) return;
+    lastFlagToggleRef.current = now;
     if (status !== "playing") return;
 
     setBoard((current) => toggleFlag(current, row, col));
@@ -193,11 +198,15 @@ function App() {
     clearLongPress();
     longPressTimerRef.current = window.setTimeout(() => {
       suppressClickRef.current = true;
-      setBoard((current) => {
-        const target = current[row][col];
-        if (target.open) return current;
-        return toggleFlag(current, row, col);
-      });
+      const now = Date.now();
+      if (now - lastFlagToggleRef.current >= 500) {
+        lastFlagToggleRef.current = now;
+        setBoard((current) => {
+          const target = current[row][col];
+          if (target.open) return current;
+          return toggleFlag(current, row, col);
+        });
+      }
       clearLongPress();
     }, 400);
   }
@@ -353,6 +362,14 @@ function App() {
                   onPointerUp={clearLongPress}
                   onPointerLeave={clearLongPress}
                   onPointerCancel={clearLongPress}
+                  onTouchStart={(e) => {
+                    // Ensure touch devices trigger long-press logic
+                    if (e.touches && e.touches.length === 1) {
+                      handleLongPressStart(row, col);
+                    }
+                  }}
+                  onTouchEnd={clearLongPress}
+                  onTouchCancel={clearLongPress}
                   style={{
                     width: `${cellSize}px`,
                     height: `${cellSize}px`,
