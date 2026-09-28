@@ -216,3 +216,7 @@ export function toggleFlag(board: Cell[][], row: number, col: number): Cell[][] 
     )
   );
 }
+
+export * from "./game/ConstraintSolver";
+export * from "./game/Generator";
+export * from "./game/Solver";
